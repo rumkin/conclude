@@ -1,0 +1,21 @@
+{
+  "name": "conclude",
+  "version": "0.1.2",
+  "description": "Conclude is a event-notifyer",
+  "main": "conclude.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node test/all.js"
+  },
+  "dependencies": {
+    "occur": "~0.1.1",
+    "blank": "~0.1.22"
+  },
+  "devDependencies": {},
+  "repository": "",
+  "author": "Pasha Rumkin <dev@rumk.in>",
+  "license": "BSD",
+  "readmeFilename": "README.md"
+}
