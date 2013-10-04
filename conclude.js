@@ -8,7 +8,7 @@ function conclude(){
 
 _.mixin(conclude, occur);
 
-conclude.prototype.wait = function(task, callback) {
+conclude.prototype.after = function(task, callback) {
 	var self  = this;
 	var tasks = [];
 	// get tasks form list of arguments of strings and arrays
@@ -62,7 +62,7 @@ conclude.prototype.getReady = function(name) {
 		self.ready(name||arguments[0]);
 	};
 	// Add wait method to ready callback
-	fn.on = function(){
+	fn.after = function(){
 		var args = _.toArray(arguments);
 		// Default callback binding
 		if (typeof _.lastItem(args) !== 'function') {
