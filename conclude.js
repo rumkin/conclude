@@ -70,7 +70,7 @@ conclude.prototype.getReady = function(name) {
 				self.ready(name);
 			});
 		}
-		self.wait.apply(self, arguments);
+		self.after.apply(self, arguments);
 	};
 	return fn;
 };
