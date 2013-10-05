@@ -43,7 +43,7 @@ conclude.prototype.after = function(task, callback) {
 	if (tasks.length) {
 		this.on('ready', wait);
 	} else {
-		wait();
+		process.nextTick(wait);
 	}
 };
 
@@ -53,7 +53,9 @@ conclude.prototype.isReady = function(name) {
 
 conclude.prototype.ready = function(name) {
 	this.tasks[name] = true;
-	this.trigger('ready', name);
+	process.nextTick(function(){
+		this.trigger({type:'ready', task:name}, name);
+	}.bind(this));
 };
 
 conclude.prototype.getReady = function(name) {
@@ -73,6 +75,24 @@ conclude.prototype.getReady = function(name) {
 		self.after.apply(self, arguments);
 	};
 	return fn;
+};
+
+conclude.prototype.task = function(name) {
+	return new task(this, name);
+}
+
+function task(conclude, name) {
+	this.conclude = conclude;
+	this.name = name;
+};
+
+task.prototype.ready = function() {
+	this.conclude.ready(this.name);
+	return this;
+};
+
+task.prototype.getReady = function() {
+	return this.ready.bind(this);
 };
 
 module.exports = conclude;

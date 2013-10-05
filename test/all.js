@@ -35,16 +35,16 @@ conclude.after('connect other', function(){
 var ready = conclude.getReady();
 
 setTimeout(function(){
-	ready('mysql');
-}, 3 * 100);
+	conclude.task('mysql').ready(new Error('Invalid params'));
+});
 
 setTimeout(function(){
 	ready('connect');
-}, 2 * 100);
+});
 
 setTimeout(function(){
 	ready('other');
-}, 1 * 100);
+});
 
 process.on('exit', function(){
 	process.exit(OK?0:-1);
