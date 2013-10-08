@@ -1,6 +1,6 @@
 {
   "name": "conclude",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Conclude is an event-notifyer",
   "main": "conclude.js",
   "directories": {

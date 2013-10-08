@@ -4,47 +4,27 @@ var done = function() {
 	OK = true;
 };
 
-conclude.after('mysql',['connect'], function(){
-	console.log('Mysql + connect');
+conclude.after(['mysql'], function(){
+	console.log('Mysql');
 });
 
-conclude.after('mysql connect other', function(){
-	console.log('mysql + connect + other');
-	conclude.after('mysql connect other', function(){
-		console.log('inner mysql + connect + other');
-		done();
-	});
+conclude.after('mysql', 'other', function(err){
+	if (err) {
+		console.error(err + '');
+	} else {
+		console.log('All done');
+	}
+	done();
 });
 
-conclude.after('connect', function(){
-	console.log('connect');
+conclude.task('other').after(['mysql'], function(err) {
+	if (err) {
+		conclude.complete('other', new Error('Initialization error'));
+	} else {
+		conclude.complete('other');
+	}
 });
-
-conclude.after('other', function(){
-	console.log('other');
-});
-
-conclude.after('mysql', function(){
-	console.log('mysql');
-});
-
-conclude.after('connect other', function(){
-	console.log('connect + other');
-});
-
-var ready = conclude.getReady();
-
-setTimeout(function(){
-	conclude.task('mysql').ready(new Error('Invalid params'));
-});
-
-setTimeout(function(){
-	ready('connect');
-});
-
-setTimeout(function(){
-	ready('other');
-});
+conclude.complete('mysql');
 
 process.on('exit', function(){
 	process.exit(OK?0:-1);

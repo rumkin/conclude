@@ -8,94 +8,104 @@ function conclude(){
 
 _.mixin(conclude, occur);
 
-conclude.prototype.after = function(task, callback) {
-	var self  = this;
-	var tasks = [];
-	// get tasks form list of arguments of strings and arrays
-	_.toArray(arguments).slice(0,-1).forEach(function(task){
-		if (_.isString(task)) {
-			task = task
-				// remove trailing spaces
-				.replace(/^\s+|\s+$/g,'')
-				// split by spaces
-				.split(/\s+/);
+conclude.prototype.after = function(tasks, callback) {
+	var self   = this;
+	var failed = [];
+	var args   = _.toArray(arguments);
+
+	callback = args.pop();
+	tasks    = this.getTasks(args);
+
+	var undone = tasks.filter(function(task){
+		if (typeof self.tasks[task] === 'undefined') {
+			return true;
+		} else if (self.tasks[task] instanceof Error) {
+			failed.push(task);
 		}
-		tasks = tasks.concat(task);
 	});
-	tasks = tasks.filter(function(task){
-		return ! self.tasks.hasOwnProperty(task);
-	});
-	callback = arguments[arguments.length - 1];
-
-	tasks = _.unique(tasks);
-	var wait = function(e, ready) {
-		// Remove ready task
-		tasks = tasks.filter(function(task){
-			return ready !== task;
-		});
-
-		if (tasks.length) return;
-
-		self.off('ready', wait);
-		callback();
-	};
-
-	if (tasks.length) {
-		this.on('ready', wait);
+	// No undone tasks
+	if (failed.length) {
+		process.nextTick(callback.bind(null, new Error('Failed tasks: ' + failed.join(', '))));
+	} else if (! undone.length) {
+		process.nextTick(callback);
 	} else {
-		process.nextTick(wait);
+		var onComplete = function(e, err){
+			if (err) {
+				self.tasks[e.task] = err;
+			} else {
+				self.tasks[e.task] = true;
+			}
+
+			undone = undone.filter(function(task) {
+				return task !== e.task;
+			});
+
+			if (undone.length) return;
+
+			var hasErrors = false;
+			var errors = {};
+			tasks.forEach(function(name){
+				var task = self.tasks[name];
+				if (task instanceof Error) {
+					hasErrors    = true;
+					errors[name] = task;
+				}
+			});
+
+			self.off('complete', onComplete);
+			if (hasErrors) {
+				callback(new Error('Failed tasks: ' + Object.keys(errors).join(', ')));
+			} else {
+				callback();
+			}
+		};
+		this.on('complete', onComplete);
 	}
 };
 
-conclude.prototype.isReady = function(name) {
-	return !!this.tasks[name];
-}
-
-conclude.prototype.ready = function(name) {
-	this.tasks[name] = true;
-	process.nextTick(function(){
-		this.trigger({type:'ready', task:name}, name);
-	}.bind(this));
+conclude.prototype.getTasks = function(tasks) {
+	var index  = -1;
+	var length = tasks.length;
+	var result = [];
+	var task;
+	while (++index < length) {
+		task = tasks[index];
+		if (typeof task === 'string') {
+			task = task.replace(/^\s+|\s+$/, '').split(/\s+/);
+		}
+		result = result.concat(task);
+	}
+	return result;
 };
 
-conclude.prototype.getReady = function(name) {
-	var self = this;
-	var fn = function() {
-		self.ready(name||arguments[0]);
-	};
-	// Add wait method to ready callback
-	fn.after = function(){
-		var args = _.toArray(arguments);
-		// Default callback binding
-		if (typeof _.lastItem(args) !== 'function') {
-			args.push(function() {
-				self.ready(name);
-			});
-		}
-		self.after.apply(self, arguments);
-	};
-	return fn;
+conclude.prototype.complete = function(name, err) {
+	var event = {type:'complete',task:name};
+	this.tasks[name] = true||err;
+	process.nextTick(this.trigger.bind(this, event, err));
+};
+
+conclude.prototype.getComplete = function() {
+	return this.complete.bind(this);
 };
 
 conclude.prototype.task = function(name) {
-	return new task(this, name);
+	var self = this;
+	var fn = function(err) {
+		this.complete(name, err);
+	}.bind(this);
+
+	fn.after = function(tasks, callback) {
+		var args = _.toArray(arguments);
+		callback = _.lastItem(arguments);
+		if (typeof callback !== 'function') {
+			callback = function() {
+				self.complete(name);
+			}
+			args.push(callback);
+		}
+		self.after.apply(self, args);
+	};
+	return fn;
 }
 
-function task(conclude, name) {
-	this.conclude = conclude;
-	this.name = name;
-};
-
-task.prototype.ready = function() {
-	this.conclude.ready(this.name);
-	return this;
-};
-
-task.prototype.getReady = function() {
-	return this.ready.bind(this);
-};
-
 module.exports = conclude;
-module.exports.create = function(){
-	return new conclude();
-};
